@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- SECURITY PATCHWALL: Content Security Policy Header -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self' https://*.gstatic.com https://*.googleapis.com https://*.firebaseio.com;
+  script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  connect-src 'self' https://*.firebaseio.com https://api.groq.com https://*.googleapis.com wss://*.firebaseio.com https://meet.jit.si;
+  frame-src 'self' https://meet.jit.si;
+  img-src 'self' data: https:;
+">
+<title>Studix — One App, Endless Learning</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --bg-primary: #0f172a;
+    --bg-card: rgba(30, 41, 59, 0.7);
+    --bg-card-hover: rgba(30, 41, 59, 0.9);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --accent-glow: #6366f1;
+    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    --accent-hover: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --marigold: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-green: #10b981;
+    --radius: 16px;
+    --sidebar-width: 280px;
+    --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #090d16;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+    background-attachment: fixed;
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- Splash ---------- */
+  #splash {
+    position: fixed; inset: 0; z-index: 999;
+    background: #090d16;
+    color: var(--text-main);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+    animation: fadeOutSplash 0.5s ease 0.8s forwards;
+  }
+  @keyframes fadeOutSplash {
+    to { opacity: 0; visibility: hidden; }
+  }
+  #splash h1 {
+    font-size: 42px; margin: 10px 0;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #splash p { color: var(--marigold); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; margin: 0; }
+  #splash .tagline { margin-top: 14px; color: var(--text-muted); font-size: 14px; font-style: italic; }
+
+  /* ---------- Header Banner ---------- */
+  header {
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 16px 20px 14px;
+    position: sticky; top: 0; z-index: 800;
+  }
+  header .top-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  header .left-header { display: flex; align-items: center; gap: 14px; }
+  header h1 {
+    margin: 0; font-size: 24px; font-weight: 800;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header p { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); max-width: 520px; }
+  
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  #sidebar-toggle-btn {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: #fff;
+    border-radius: 12px; width: 42px; height: 42px; font-size: 20px; cursor: pointer; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+  }
+  #sidebar-toggle-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+
+  #bell-btn {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: #fff;
+    border-radius: 12px; width: 42px; height: 42px; font-size: 16px; cursor: pointer; position: relative; flex: 0 0 auto;
+    transition: all 0.2s ease;
+  }
+  #bell-btn:hover { background: rgba(255, 255, 255, 0.1); }
+  #bell-dot {
+    position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-red); display: none; box-shadow: 0 0 8px var(--accent-red);
+  }
+  #user-chip { font-size: 12px; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+  #user-chip img { width: 22px; height: 22px; border-radius: 50%; }
+  #logout-link { color: var(--marigold); cursor: pointer; text-decoration: underline; font-weight: 600; }
+
+  /* ---------- Sliding Sidebar ---------- */
+  #sidebar-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 950;
+    opacity: 0; pointer-events: none; transition: opacity .25s ease;
+  }
+  #sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+
+  #sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100%;
+    background: #0f172a; border-right: 1px solid var(--border-color); color: var(--text-main); z-index: 960;
+    transform: translateX(-100%); transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column; box-shadow: var(--shadow);
+  }
+  #sidebar.open { transform: translateX(0); }
+
+  .sidebar-header {
+    padding: 20px; border-bottom: 1px solid var(--border-color);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sidebar-header h2 { margin: 0; font-size: 20px; color: #fff; }
+  .sidebar-close-btn { background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+  
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px;
+    color: var(--text-muted); background: transparent; border: none; width: 100%; text-align: left;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s ease;
+  }
+  .sidebar-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .sidebar-item.active { background: var(--accent-gradient); color: #fff; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+
+  /* ---------- Nav Tabs ---------- */
+  nav {
+    display: flex; gap: 8px; padding: 12px 16px; background: transparent;
+    border-bottom: 1px solid var(--border-color); overflow-x: auto;
+  }
+  nav button {
+    border: 1px solid var(--border-color); background: rgba(255,255,255,0.03); color: var(--text-muted);
+    padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; transition: all .2s ease;
+  }
+  nav button:hover { background: rgba(255,255,255,0.08); color: var(--text-main); }
+  nav button.active { background: var(--accent-gradient); border-color: transparent; color: #fff; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3); }
+
+  main { flex: 1; padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; }
+  section { display: none; }
+  section.active { display: block; animation: slideIn .3s ease; }
+
+  .card {
+    background: var(--bg-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .card:hover { border-color: rgba(255,255,255,0.18); }
+  
+  h2.section-title {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--marigold); margin: 0 0 12px; font-weight: 700;
+  }
+  .subtle { font-size: 13px; color: var(--text-muted); margin-top: -6px; margin-bottom: 14px; }
+
+  /* ---------- About / Login Cards ---------- */
+  #about-card, #login-card { max-width: 480px; margin: 32px auto; text-align: center; }
+  #about-card h1, #login-card h1 {
+    font-size: 32px; margin-bottom: 4px;
+    background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .motto { color: var(--marigold); font-weight: 700; font-size: 12px; letter-spacing: .1em; margin-bottom: 20px; text-transform: uppercase; }
+  .about-text { font-size: 14px; color: var(--text-muted); line-height: 1.6; text-align: left; margin-bottom: 16px; }
+  .about-feature { display: flex; align-items: flex-start; gap: 12px; text-align: left; font-size: 13.5px; padding: 10px 0; border-bottom: 1px dashed var(--border-color); }
+  
+  #google-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+    background: #fff; border: none; padding: 12px; border-radius: 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer; color: #000; transition: background 0.2s;
+  }
+  #google-btn:hover { background: #e2e8f0; }
+  
+  .auth-toggle { display: flex; gap: 8px; margin: 16px 0 14px; justify-content: center; }
+  .auth-toggle button {
+    border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 6px 14px;
+    border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  }
+  .auth-toggle button.active { background: var(--accent-gradient); color: #fff; border-color: transparent; }
+  
+  #email-auth-panel { display: none; text-align: left; }
+  #email-switch-mode { font-size: 12.5px; color: var(--marigold); cursor: pointer; text-decoration: underline; display: block; text-align: center; margin-top: 8px; }
+  #email-auth-status { font-size: 12px; color: var(--accent-red); min-height: 16px; margin-bottom: 4px; }
+  #role-picker { display: none; margin-top: 16px; text-align: left; }
+
+  /* ---------- Interactive Elements & Buttons ---------- */
+  .field {
+    width: 100%; padding: 12px 14px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color);
+    border-radius: 10px; font-size: 14px; color: var(--text-main); margin-bottom: 12px; outline: none;
+    transition: border-color 0.2s ease;
+  }
+  .field:focus { border-color: var(--accent-glow); }
+  
+  .password-container { position: relative; width: 100%; }
+  .password-container .field { padding-right: 44px; margin-bottom: 12px; }
+  .password-toggle-btn {
+    position: absolute; right: 12px; top: 38%; transform: translateY(-50%);
+    background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;
+  }
+
+  .btn {
+    background: var(--accent-gradient); color: #fff; border: none; padding: 12px 20px;
+    border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s ease;
+  }
+  .btn:hover { background: var(--accent-hover); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+  .btn.secondary { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
+  .btn.secondary:hover { background: rgba(255,255,255,0.05); }
+  .btn.small { padding: 6px 12px; font-size: 12.5px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ---------- Dashboard ---------- */
+  .dash-greeting { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .dash-greeting img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--marigold); }
+  .dash-greeting .name { font-size: 18px; font-weight: 700; }
+  .dash-greeting .sub { font-size: 13px; color: var(--text-muted); }
+
+  /* ---------- AI Chat ---------- */
+  #chat-window {
+    height: 360px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 14px; background: rgba(0, 0, 0, 0.2); margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; animation: messagePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  @keyframes messagePop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .msg.bot { background: rgba(255,255,255,0.08); border-bottom-left-radius: 2px; color: var(--text-main); }
+  .msg.user { background: var(--accent-gradient); color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
+  .msg.system { align-self: center; color: var(--text-muted); font-size: 12px; font-style: italic; }
+  
+  .chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .chat-input-row textarea {
+    flex: 1; resize: none; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color);
+    border-radius: 10px; font-size: 14px; color: var(--text-main); font-family: inherit; min-height: 44px; max-height: 110px; outline: none;
+  }
+  .icon-btn {
+    border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-main); border-radius: 10px;
+    width: 44px; height: 44px; font-size: 18px; cursor: pointer; flex: 0 0 44px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.1); }
+  .icon-btn.recording { background: var(--accent-red); border-color: var(--accent-red); color: #fff; animation: pulseRecord 1.5s infinite; }
+  @keyframes pulseRecord { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+  #img-preview { max-width: 90px; border-radius: 8px; margin-bottom: 8px; display: none; border: 1px solid var(--border-color); }
+  .timer-pill {
+    font-size: 12px; color: var(--marigold); font-weight: 700; background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2); padding: 4px 12px; border-radius: 999px; display: inline-block; margin-bottom: 12px;
+  }
+
+  /* ---------- Creative Corner ---------- */
+  .prompt-chip {
+    display: inline-block; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 999px;
+    padding: 6px 14px; font-size: 12.5px; margin: 4px 6px 4px 0; cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+  }
+  .prompt-chip:hover { background: rgba(255,255,255,0.1); color: var(--text-main); transform: translateY(-1px); }
+
+  /* ---------- Group Chat ---------- */
+  #group-window {
+    height: 360px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 14px; background: rgba(0, 0, 0, 0.2); margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .gmsg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.4; animation: messagePop 0.2s ease; }
+  .gmsg .who { font-size: 11px; font-weight: 700; color: var(--marigold); margin-bottom: 2px; }
+  .gmsg.me { background: var(--accent-gradient); color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
+  .gmsg.me .who { color: rgba(255,255,255,0.8); }
+  .gmsg.other { background: rgba(255,255,255,0.08); align-self: flex-start; border-bottom-left-radius: 2px; }
+
+  /* ---------- Video Tab ---------- */
+  .video-frame { width: 100%; height: 420px; border: none; border-radius: 12px; background: #000; }
+
+  /* ---------- Lists / Badges ---------- */
+  .list-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 8px; font-size: 13.5px;
+    background: rgba(0,0,0,0.15); animation: slideIn 0.3s ease;
+  }
+  .list-item a { color: var(--marigold); font-weight: 700; text-decoration: none; }
+  .badge { font-size: 10px; background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 999px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+  .badge.red { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+  .badge.green { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+  .goal-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--border-color); font-size: 14px; transition: opacity 0.2s; }
+  .goal-item.done span { text-decoration: line-through; color: var(--text-muted); }
+  .empty-hint { font-size: 13px; color: var(--text-muted); }
+
+  /* ---------- Leaderboard ---------- */
+  .lb-row { display: flex; align-items: center; gap: 12px; padding: 12px 8px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+  .lb-rank { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12.5px; color: var(--marigold); flex: 0 0 auto; }
+  .lb-row.top1 .lb-rank { background: var(--accent-gradient); color: #fff; }
+  .lb-points { margin-left: auto; font-weight: 700; color: var(--marigold); }
+
+  /* ---------- Quizzes ---------- */
+  .quiz-q { padding: 14px 0; border-bottom: 1px dashed var(--border-color); }
+  .quiz-q p { font-weight: 600; margin: 0 0 10px; }
+  .quiz-opt { display: block; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 6px; cursor: pointer; font-size: 13.5px; background: rgba(0,0,0,0.1); transition: all 0.2s; }
+  .quiz-opt:hover { background: rgba(255,255,255,0.05); }
+  .quiz-opt.selected { border-color: var(--marigold); background: rgba(245, 158, 11, 0.1); }
+  .quiz-opt.correct { border-color: var(--accent-green); background: rgba(16, 185, 129, 0.1); }
+  .quiz-opt.wrong { border-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
+
+  /* ---------- Stats Grid ---------- */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .stat-box { background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; text-align: center; transition: transform 0.2s; }
+  .stat-box:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); }
+  .stat-box .num { font-size: 24px; font-weight: 800; color: var(--text-main); display: block; }
+  .stat-box .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* ---------- Notifications Panel ---------- */
+  #notif-panel {
+    position: fixed; top: 0; right: 0; width: min(340px, 88vw); height: 100%; background: #0f172a;
+    border-left: 1px solid var(--border-color); box-shadow: var(--shadow); z-index: 900; transform: translateX(100%); transition: transform .25s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 20px; overflow-y: auto;
+  }
+  #notif-panel.open { transform: translateX(0); }
+  #notif-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 890; display: none; }
+  #notif-overlay.open { display: block; }
+  .notif-item { padding: 12px 0; border-bottom: 1px solid var(--border-color); font-size: 13px; animation: slideIn 0.2s ease; }
+  .notif-item .t { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+
+  select.field option { background: #0f172a; color: #fff; }
+  footer { text-align: center; padding: 20px; font-size: 12px; color: var(--text-muted); }
+
+  /* ---------- Animations & Modern Extras ---------- */
+  @keyframes slideIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
+  
+  .ai-thinking { display: inline-flex; gap: 5px; align-items: center; }
+  .ai-thinking i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-glow); animation: bounceDot 1.1s infinite; }
+  .ai-thinking i:nth-child(2) { animation-delay: .15s }
+  .ai-thinking i:nth-child(3) { animation-delay: .3s }
+  @keyframes bounceDot { 0%, 80%, 100% { transform: scale(.65); opacity: .45 } 40% { transform: scale(1); opacity: 1 } }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+  .status-submitted { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+  .status-checked { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+  
+  .file-box { border: 1.5px dashed var(--border-color); border-radius: 12px; padding: 16px; text-align: center; background: rgba(0,0,0,0.15); margin: 12px 0; cursor: pointer; transition: border-color 0.2s; }
+  .file-box:hover { border-color: var(--accent-glow); }
+  .remark-box { background: rgba(255,255,255,0.05); border-left: 3px solid var(--marigold); padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+  
+  .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .feature-tile { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(0,0,0,0.15); cursor: pointer; transition: .2s; }
+  .feature-tile:hover { transform: translateY(-2px); border-color: var(--accent-glow); background: rgba(255,255,255,0.05); }
+
+  @keyframes popCelebration { 
+    0% { transform: scale(0.4) rotate(-5deg); opacity: 0; filter: brightness(1.5); } 
+    60% { transform: scale(1.08) rotate(2deg); opacity: 1; filter: brightness(1.2); } 
+    100% { transform: scale(1) rotate(0deg); opacity: 1; filter: brightness(1); } 
+  }
+  .celebration-banner { 
+    background: var(--accent-gradient); color: #fff; padding: 16px 24px; border-radius: 14px; text-align: center; font-weight: 700; margin-bottom: 16px; 
+    animation: popCelebration 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 15px 35px rgba(99, 102, 241, 0.5); 
+    border: 1px solid rgba(255, 255, 255, 0.3); font-size: 15px; letter-spacing: 0.3px;
+  }
+
+  @media(max-width: 600px) {
+    .feature-grid { grid-template-columns: 1fr; }
+    .card { padding: 16px; }
+    main { padding: 12px; }
+    .video-frame { height: 280px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <h1>Studix</h1>
+  <p>ONE APP, ENDLESS LEARNING</p>
+  <div class="tagline">Loading your classroom...</div>
+</div>
+
+<!-- SLIDING SIDEBAR -->
+<div id="sidebar-overlay"></div>
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <h2>Studix Menu</h2>
+    <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+  </div>
+  <div class="sidebar-nav" id="sidebar-nav"></div>
+</aside>
+
+<header>
+  <div class="top-row">
+    <div class="left-header">
+      <button id="sidebar-toggle-btn" title="Open Menu">☰</button>
+      <div>
+        <h1>Studix</h1>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="bell-btn" title="Notifications">🔔<span id="bell-dot"></span></button>
+    </div>
+  </div>
+  <p style="margin-left: 56px;">One app, endless learning — solve doubts, study live, and grow together.</p>
+  <div id="user-chip" style="display:none; margin-left: 56px;"></div>
+</header>
+
+<nav id="tabs"></nav>
+
+<main>
+
+  <!-- ABOUT / WHO WE ARE -->
+  <div class="card" id="about-card">
+    <h1>Studix</h1>
+    <div class="motto">ONE APP, ENDLESS LEARNING</div>
+    <p class="about-text">Studix is a single classroom app built for students, teachers, and parents to meet and learn together.</p>
+    <div class="about-feature"><span class="emoji">🤖</span><span>Ask an AI study buddy anything, anytime — type, speak, or snap a photo of your doubt.</span></div>
+    <div class="about-feature"><span class="emoji">👥</span><span>Join live group study and video calls with your whole class.</span></div>
+    <div class="about-feature"><span class="emoji">📊</span><span>Track goals, quizzes, attendance, and progress — all in one dashboard.</span></div>
+    <div class="about-feature"><span class="emoji">👨‍👩‍👧</span><span>Parents and teachers get their own view into what's happening.</span></div>
+    <button class="btn" id="about-continue-btn" style="width:100%; margin-top:20px;">Get Started</button>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="card" id="login-card" style="display:none;">
+    <h1>Studix</h1>
+    <div class="motto">ONE APP, ENDLESS LEARNING</div>
+
+    <button id="google-btn">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.4C29.7 35.4 27 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.6 5.1C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.6 5.4C41.4 36.3 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+      Sign in with Google
+    </button>
+
+    <div class="auth-toggle">
+      <button id="show-google-tab" class="active">Google</button>
+      <button id="show-email-tab">Email &amp; Password</button>
+    </div>
+
+    <div id="email-auth-panel">
+      <div id="email-auth-status"></div>
+      <input type="text" id="email-name-input" class="field" placeholder="Full name" style="display:none;">
+      <input type="email" id="email-input" class="field" placeholder="Email">
+      <div class="password-container">
+        <input type="password" id="password-input" class="field" placeholder="Password (min 6 characters)">
+        <button type="button" id="toggle-password-btn" class="password-toggle-btn" title="Show/Hide Password">👁️</button>
+      </div>
+      <button class="btn" id="email-submit-btn" style="width:100%;">Sign In</button>
+      <span id="email-switch-mode">New here? Create an account instead</span>
+    </div>
+
+    <div id="role-picker">
+      <p style="font-size:12.5px; color:var(--text-muted);">First time here — tell us who you are:</p>
+      <select id="role-input" class="field">
+        <option value="student">I'm a Student</option>
+        <option value="teacher">I'm a Teacher</option>
+        <option value="parent">I'm a Parent</option>
+      </select>
+      
+      <!-- Grade selection for Student -->
+      <div id="student-grade-wrap" style="display:block;">
+        <select id="student-grade-input" class="field">
+          <option value="">Select Grade / Class</option>
+          <option value="Grade 6">Grade 6</option>
+          <option value="Grade 7">Grade 7</option>
+          <option value="Grade 8">Grade 8</option>
+          <option value="Grade 9">Grade 9</option>
+          <option value="Grade 10">Grade 10</option>
+          <option value="Grade 11">Grade 11</option>
+          <option value="Grade 12">Grade 12</option>
+        </select>
+      </div>
+
+      <div id="parent-email-wrap" style="display:none;">
+        <input type="email" id="parent-child-email" class="field" placeholder="Your child's Studix email">
+        <!-- Grade selection for Parent to track student -->
+        <select id="parent-grade-input" class="field">
+          <option value="">Select Child's Grade / Class</option>
+          <option value="Grade 6">Grade 6</option>
+          <option value="Grade 7">Grade 7</option>
+          <option value="Grade 8">Grade 8</option>
+          <option value="Grade 9">Grade 9</option>
+          <option value="Grade 10">Grade 10</option>
+          <option value="Grade 11">Grade 11</option>
+          <option value="Grade 12">Grade 12</option>
+        </select>
+      </div>
+      <button class="btn" id="finish-signup-btn" style="width:100%;">Continue</button>
+    </div>
+  </div>
+
+  <div id="app-content" style="display:none;">
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="active">
+      <div class="card">
+        <div class="dash-greeting">
+          <img id="dash-photo" src="" onerror="this.style.display='none'">
+          <div>
+            <div class="name" id="dash-name">—</div>
+            <div class="sub" id="dash-sub">—</div>
+          </div>
+        </div>
+        <div class="stat-grid" id="dash-stats"></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">📌 Due Soon</h2>
+        <div id="dash-homework"><p class="empty-hint">No homework posted yet.</p></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">📖 Recent Doubts</h2>
+        <div id="dash-doubts"><p class="empty-hint">No doubts asked yet.</p></div>
+      </div>
+    </section>
+
+    <!-- AI CHAT TAB -->
+    <section id="tab-ai">
+      <div class="card">
+        <h2 class="section-title">AI Study Assistant — Solve Doubts Anytime</h2>
+        <div class="timer-pill" id="session-timer">⏱ Session active: 60:00 remaining</div>
+        <div id="chat-window"></div>
+        <img id="img-preview">
+        <div class="chat-input-row">
+          <button class="icon-btn" id="mic-btn" title="Speak your question">🎤</button>
+          <textarea id="chat-input" placeholder="Type your question... e.g. Explain photosynthesis"></textarea>
+          <input type="file" id="img-input" accept="image/*" style="display:none;">
+          <button class="icon-btn" id="img-btn" title="Upload an image">🖼️</button>
+          <button class="icon-btn" id="send-btn" title="Send">➤</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">✨ Creative Corner &amp; Smart Prompts</h2>
+        <span class="prompt-chip">Explain Newton's 3rd law with a real example</span>
+        <span class="prompt-chip">Quiz me on the periodic table</span>
+        <span class="prompt-chip">Help me write an intro for my project</span>
+        <span class="prompt-chip">Give me a fun fact about the human body</span>
+      </div>
+    </section>
+
+    <!-- DOUBT HISTORY -->
+    <section id="tab-doubts">
+      <div class="card">
+        <h2 class="section-title">📖 Doubt History</h2>
+        <p class="subtle">Every question you've submitted is saved automatically.</p>
+        <div id="doubts-list"><p class="empty-hint">No doubts asked yet — go ask something!</p></div>
+      </div>
+    </section>
+
+    <!-- STUDY GOALS -->
+    <section id="tab-goals">
+      <div class="card">
+        <h2 class="section-title">🎯 Study Goals &amp; Smart Planner</h2>
+        <p class="subtle">Set small daily/weekly goals, maintain your streaks, and tick them off.</p>
+        <div class="chat-input-row" style="margin-bottom:14px;">
+          <input type="text" id="goal-input" class="field" style="margin-bottom:0;" placeholder="e.g. Finish Ch 4 numericals">
+          <button class="icon-btn" id="goal-add-btn">➕</button>
+        </div>
+        <div id="goals-list"><p class="empty-hint">No goals yet — add one above.</p></div>
+      </div>
+    </section>
+
+    <!-- QUIZZES -->
+    <section id="tab-quiz">
+      <div class="card">
+        <h2 class="section-title">📝 AI Exam / Mock Test Mode</h2>
+        <p class="subtle">Pick a topic, select your language support, and build a quick practice quiz or flashcards.</p>
+        <input type="text" id="quiz-topic-input" class="field" placeholder="Topic, e.g. Photosynthesis">
+        <select id="quiz-lang-select" class="field">
+          <option value="English">English Support</option>
+          <option value="Hindi">Hindi Support (हिंदी)</option>
+          <option value="Marathi">Marathi Support (मराठी)</option>
+        </select>
+        <button class="btn" id="quiz-generate-btn">Generate Quiz / Test</button>
+        <div id="quiz-area" style="margin-top:14px;"></div>
+      </div>
+    </section>
+
+    <!-- HOMEWORK -->
+    <section id="tab-homework">
+      <div class="card" id="homework-post-card" style="display:none;">
+        <h2 class="section-title">📌 Post Homework / Reminder</h2>
+        <input type="text" id="hw-title-input" class="field" placeholder="Title, e.g. Ch 3 exercise">
+        <input type="date" id="hw-date-input" class="field">
+        <input type="text" id="hw-details-input" class="field" placeholder="Details (optional)">
+        <button class="btn" id="hw-post-btn">Post to class</button>
+      </div>
+      
+      <div class="card" id="student-homework-submit-card" style="display:none;">
+        <h2 class="section-title">📤 Submit Homework</h2>
+        <p class="subtle">Choose an assigned homework, attach your work, and send it to your teacher.</p>
+        <select id="student-hw-select" class="field"><option value="">Select assigned homework</option></select>
+        <div class="file-box" onclick="document.getElementById('student-hw-file').click();">
+          <input type="file" id="student-hw-file" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none;">
+          <div id="student-hw-file-name" class="subtle" style="margin:0;">Click to attach homework file (PDF, Image, Doc)</div>
+        </div>
+        <button class="btn" id="student-hw-submit-btn">Submit Homework</button>
+        <div id="student-hw-submit-status" style="font-size:12px;margin-top:10px;"></div>
+      </div>
+
+      <div class="card" id="teacher-homework-checker-card" style="display:none;">
+        <h2 class="section-title">🤖 AI Homework Checker</h2>
+        <p class="subtle">Review student submissions, let AI analyze answers, generate remarks, and approve feedback.</p>
+        <div id="teacher-submissions-list"><p class="empty-hint">No student submissions to review right now.</p></div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">📌 Assigned Homework &amp; Deadlines</h2>
+        <div id="homework-list"><p class="empty-hint">No homework posted yet.</p></div>
+      </div>
+    </section>
+
+    <!-- ATTENDANCE -->
+    <section id="tab-attendance">
+      <div class="card" id="attendance-mark-card" style="display:none;">
+        <h2 class="section-title">🗓️ Mark Attendance</h2>
+        <input type="date" id="att-date-input" class="field">
+        <div id="att-mark-list"></div>
+        <button class="btn" id="att-save-btn">Save Attendance</button>
+        <p id="att-status" style="font-size:12px; color:var(--text-muted);"></p>
+      </div>
+      <div class="card">
+        <h2 class="section-title">🗓️ My Attendance</h2>
+        <div class="stat-grid">
+          <div class="stat-box"><span class="num" id="att-percent">–</span><span class="lbl">Present %</span></div>
+          <div class="stat-box"><span class="num" id="att-days">–</span><span class="lbl">Days Recorded</span></div>
+        </div>
+        <div id="att-history"></div>
+      </div>
+    </section>
+
+    <!-- QUESTION PAPERS -->
+    <section id="tab-papers">
+      <div class="card" id="paper-gen-card" style="display:none;">
+        <h2 class="section-title">🧾 AI Printable Question Paper Generator</h2>
+        <input type="text" id="paper-topic-input" class="field" placeholder="Topic / chapter, e.g. Force and Laws of Motion">
+        <input type="text" id="paper-marks-input" class="field" placeholder="Total marks, e.g. 25">
+        <button class="btn" id="paper-generate-btn">Generate Printable Question Paper</button>
+      </div>
+      <div class="card">
+        <h2 class="section-title">🧾 Printable Question Papers</h2>
+        <div id="papers-list"><p class="empty-hint">No question papers yet.</p></div>
+      </div>
+    </section>
+
+    <!-- PROGRESS REPORTS -->
+    <section id="tab-progress">
+      <div class="card" id="progress-select-card" style="display:none;">
+        <h2 class="section-title">📊 View Student Progress Analytics</h2>
+        <select id="progress-student-select" class="field"></select>
+      </div>
+      <div class="card">
+        <h2 class="section-title">📊 Advanced Progress Analytics</h2>
+        <div class="stat-grid">
+          <div class="stat-box"><span class="num" id="pr-quiz-avg">–</span><span class="lbl">Avg Quiz Score</span></div>
+          <div class="stat-box"><span class="num" id="pr-attendance">–</span><span class="lbl">Attendance %</span></div>
+          <div class="stat-box"><span class="num" id="pr-goals">–</span><span class="lbl">Goals Completed</span></div>
+          <div class="stat-box"><span class="num" id="pr-points">–</span><span class="lbl">Leaderboard Points</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KNOW YOUR TEACHERS OPTION -->
+    <section id="tab-teachers">
+      <div class="card">
+        <h2 class="section-title">👩‍🏫 Know Your Teachers</h2>
+        <p class="subtle">Get to know the teachers, subjects taught, and contact details for your grade.</p>
+        <div id="teachers-info-list"><p class="empty-hint">Loading teacher information...</p></div>
+      </div>
+    </section>
+
+    <!-- LEADERBOARD -->
+    <section id="tab-leaderboard">
+      <div class="card">
+        <h2 class="section-title">🏆 Class Ranking &amp; Badges</h2>
+        <p class="subtle">Earn achievements, badges, and points from quizzes to improve your class ranking!</p>
+        <div id="leaderboard-list"><p class="empty-hint">No scores yet.</p></div>
+      </div>
+    </section>
+
+    <!-- PARENT DASHBOARD -->
+    <section id="tab-parent">
+      <div class="card">
+        <h2 class="section-title">👨‍👩‍👧 Parent Dashboard</h2>
+        <p class="subtle" id="parent-child-label">Showing your child's activity, homework updates, and achievements.</p>
+        <div class="stat-grid">
+          <div class="stat-box"><span class="num" id="pd-quiz-avg">–</span><span class="lbl">Avg Quiz Score</span></div>
+          <div class="stat-box"><span class="num" id="pd-attendance">–</span><span class="lbl">Attendance %</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">📌 Homework Tracking</h2>
+        <div id="pd-homework-list"><p class="empty-hint">No homework posted yet.</p></div>
+      </div>
+    </section>
+
+    <!-- GROUP STUDY -->
+    <section id="tab-group">
+      <div class="card">
+        <h2 class="section-title">👥 Group Study Chat</h2>
+        <p class="subtle">Everyone in class shares this room. Solve doubts, share assignments, help each other.</p>
+        <div id="group-window"></div>
+        <div class="chat-input-row">
+          <textarea id="group-input" placeholder="Message the class..."></textarea>
+          <button class="icon-btn" id="group-send-btn" title="Send">➤</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIDEO -->
+    <section id="tab-video">
+      <div class="card">
+        <h2 class="section-title">🎥 Live Class / Group Study Call</h2>
+        <p class="subtle">One room for the whole class — join anytime during the group study slot.</p>
+        <div id="video-holder">
+          <button class="btn" id="join-call-btn">Join Live Room</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEACHER MATERIALS -->
+    <section id="tab-teacher">
+      <div class="card" id="teacher-upload-card" style="display:none;">
+        <h2 class="section-title">📤 Share Material &amp; Study Notes</h2>
+        <p class="subtle">Upload your file to Google Drive, set sharing to "Anyone with the link," then paste it here.</p>
+        <input type="text" id="material-name-input" class="field" placeholder="Title, e.g. Ch 3 Worksheet">
+        <input type="text" id="material-link-input" class="field" placeholder="Paste Google Drive link here">
+        <button class="btn" id="material-upload-btn">Share with class</button>
+        <p id="upload-status" style="font-size:12px; color:var(--text-muted);"></p>
+      </div>
+      <div class="card">
+        <h2 class="section-title">📚 Class Materials &amp; AI Notes Generator</h2>
+        <div id="materials-list"><p class="empty-hint">No materials yet.</p></div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="notif-overlay"></div>
+<div id="notif-panel">
+  <h2 class="section-title">🔔 Smart Notifications</h2>
+  <div id="notif-list"><p class="empty-hint">Nothing new right now.</p></div>
+</div>
+
+<footer>Studix — Built for Classroom Collaboration</footer>
+
+<script>
+/* =========================================================
+   GROQ API SETUP
+   ========================================================= */
+const GROQ_API_KEY = "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";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+async function callGroqAI(promptText) {
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: "system", content: "You are an advanced AI study assistant for students and teachers. Format your response clearly in structured bullet points using clean bullet characters (•)." },
+          { role: "user", content: promptText }
+        ],
+        temperature: 0.7
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Groq API Error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0]?.message?.content || "• No response returned.";
+  } catch (err) {
+    console.error("Groq Error:", err);
+    throw err;
+  }
+}
+
+/* =========================================================
+   FIREBASE SETUP
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDyvGpHQ3MWUVuvPoGHzBJgg6Il5m5Kl_s",
+  authDomain: "studydesk-b98da.firebaseapp.com",
+  projectId: "studydesk-b98da",
+  storageBucket: "studydesk-b98da.firebasestorage.app",
+  messagingSenderId: "36259795704",
+  appId: "1:36259795704:web:00471c7855a3540372a10d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+let currentUser = null;
+let parentChildUid = null;
+
+function emailKey(email){ return email.toLowerCase().replace(/[.#$\[\]]/g,'_'); }
+
+/* ---------------- SPLASH ---------------- */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('splash').style.display = 'none';
+  }, 900);
+});
+
+/* ---------------- SIDEBAR CONTROLLER ---------------- */
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+
+function openSidebar() {
+  sidebar.classList.add('open');
+  sidebarOverlay.classList.add('open');
+}
+
+function closeSidebar() {
+  sidebar.classList.remove('open');
+  sidebarOverlay.classList.remove('open');
+}
+
+sidebarToggleBtn.addEventListener('click', openSidebar);
+sidebarCloseBtn.addEventListener('click', closeSidebar);
+sidebarOverlay.addEventListener('click', closeSidebar);
+
+/* ---------------- ABOUT -> LOGIN TRANSITION ---------------- */
+document.getElementById('about-continue-btn').onclick = () => {
+  document.getElementById('about-card').style.display = 'none';
+  document.getElementById('login-card').style.display = 'block';
+};
+
+/* ---------------- AUTH & PASSWORD TOGGLE ---------------- */
+document.getElementById('toggle-password-btn').onclick = () => {
+  const pwdInput = document.getElementById('password-input');
+  if(pwdInput.type === 'password'){
+    pwdInput.type = 'text';
+    document.getElementById('toggle-password-btn').textContent = '🔒';
+  } else {
+    pwdInput.type = 'password';
+    document.getElementById('toggle-password-btn').textContent = '👁️';
+  }
+};
+
+document.getElementById('google-btn').onclick = () => {
+  auth.signInWithPopup(googleProvider).catch(err=>{
+    console.error(err);
+    alert('Sign-in failed: ' + err.message);
+  });
+};
+
+document.getElementById('show-google-tab').onclick = () => {
+  document.getElementById('show-google-tab').classList.add('active');
+  document.getElementById('show-email-tab').classList.remove('active');
+  document.getElementById('google-btn').style.display = 'flex';
+  document.getElementById('email-auth-panel').style.display = 'none';
+};
+document.getElementById('show-email-tab').onclick = () => {
+  document.getElementById('show-email-tab').classList.add('active');
+  document.getElementById('show-google-tab').classList.remove('active');
+  document.getElementById('google-btn').style.display = 'none';
+  document.getElementById('email-auth-panel').style.display = 'block';
+};
+
+let emailAuthMode = 'signin';
+function setEmailAuthMode(mode){
+  emailAuthMode = mode;
+  document.getElementById('email-name-input').style.display = mode === 'signup' ? 'block' : 'none';
+  document.getElementById('email-submit-btn').textContent = mode === 'signup' ? 'Create Account' : 'Sign In';
+  document.getElementById('email-switch-mode').textContent = mode === 'signup' ? 'Already have an account? Sign in instead' : 'New here? Create an account instead';
+  document.getElementById('email-auth-status').textContent = '';
+}
+document.getElementById('email-switch-mode').onclick = () => setEmailAuthMode(emailAuthMode === 'signin' ? 'signup' : 'signin');
+
+document.getElementById('email-submit-btn').onclick = async () => {
+  const status = document.getElementById('email-auth-status');
+  const email = document.getElementById('email-input').value.trim();
+  const password = document.getElementById('password-input').value;
+  const name = document.getElementById('email-name-input').value.trim();
+  status.textContent = '';
+  if(!email || !password || password.length < 6){
+    status.textContent = 'Enter a valid email and a password of at least 6 characters.';
+    return;
+  }
+  try{
+    if(emailAuthMode === 'signup'){
+      if(!name){ status.textContent = 'Enter your full name.'; return; }
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      await cred.user.updateProfile({ displayName: name });
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
+    }
+  }catch(err){
+    console.error(err);
+    status.textContent = err.message;
+  }
+};
+
+document.getElementById('role-input').addEventListener('change', (e)=>{
+  const role = e.target.value;
+  document.getElementById('student-grade-wrap').style.display = role === 'student' ? 'block' : 'none';
+  document.getElementById('parent-email-wrap').style.display = role === 'parent' ? 'block' : 'none';
+});
+
+let pendingAuthUser = null;
+
+auth.onAuthStateChanged(async (user) => {
+  if(!user){
+    document.getElementById('app-content').style.display = 'none';
+    document.getElementById('user-chip').style.display = 'none';
+    if(document.getElementById('about-card').style.display === 'none'){
+      document.getElementById('login-card').style.display = 'block';
+    }
+    return;
+  }
+  pendingAuthUser = user;
+  const snap = await db.ref('users/' + user.uid).get();
+  if(snap.exists()){
+    const data = snap.val();
+    currentUser = { uid: user.uid, name: data.name || user.displayName || user.email, email: user.email, photo: user.photoURL, role: data.role, grade: data.grade || '' };
+    if(data.role === 'parent'){
+      const linkSnap = await db.ref('parentLinks/' + user.uid).get();
+      parentChildUid = linkSnap.exists() ? linkSnap.val().childUid : null;
+    }
+    enterApp();
+  } else {
+    document.getElementById('about-card').style.display = 'none';
+    document.getElementById('login-card').style.display = 'block';
+    document.getElementById('role-picker').style.display = 'block';
+    document.getElementById('google-btn').style.display = 'none';
+    document.getElementById('email-auth-panel').style.display = 'none';
+    document.querySelector('.auth-toggle').style.display = 'none';
+  }
+});
+
+document.getElementById('finish-signup-btn').onclick = async () => {
+  if(!pendingAuthUser) return;
+  const role = document.getElementById('role-input').value;
+  let grade = '';
+  if(role === 'student'){
+    grade = document.getElementById('student-grade-input').value;
+  } else if(role === 'parent'){
+    grade = document.getElementById('parent-grade-input').value;
+  }
+
+  const user = pendingAuthUser;
+  const userData = { name: user.displayName || user.email, email: user.email, role: role, grade: grade, points: 0, createdAt: Date.now() };
+  await db.ref('users/' + user.uid).set(userData);
+  await db.ref('usersByEmail/' + emailKey(user.email)).set(user.uid);
+
+  if(role === 'parent'){
+    const childEmail = document.getElementById('parent-child-email').value.trim();
+    if(childEmail){
+      const childSnap = await db.ref('usersByEmail/' + emailKey(childEmail)).get();
+      if(childSnap.exists()){
+        const childUid = childSnap.val();
+        await db.ref('parentLinks/' + user.uid).set({ childUid, childEmail });
+        parentChildUid = childUid;
+      } else {
+        alert("Couldn't find a student with that email yet.");
+      }
+    }
+  }
+
+  currentUser = { uid: user.uid, name: user.displayName || user.email, email: user.email, photo: user.photoURL, role, grade };
+  enterApp();
+};
+
+function signOut(){
+  auth.signOut();
+  currentUser = null;
+  location.reload();
+}
+
+/* ---------------- ENTER APP ---------------- */
+function enterApp(){
+  document.getElementById('login-card').style.display = 'none';
+  document.getElementById('app-content').style.display = 'block';
+
+  const chip = document.getElementById('user-chip');
+  chip.style.display = 'flex';
+  chip.innerHTML = `<img src="${currentUser.photo || ''}" onerror="this.style.display='none'">
+    <span>${escapeHtml(currentUser.name)} · ${currentUser.role} ${currentUser.grade ? '('+escapeHtml(currentUser.grade)+')':''}</span>
+    <span id="logout-link">Sign out</span>`;
+  document.getElementById('logout-link').onclick = signOut;
+
+  buildNav();
+  startSession();
+  greetUser(currentUser.name);
+
+  if(currentUser.role === 'teacher'){
+    document.getElementById('teacher-upload-card').style.display = 'block';
+    document.getElementById('homework-post-card').style.display = 'block';
+    document.getElementById('attendance-mark-card').style.display = 'block';
+    document.getElementById('paper-gen-card').style.display = 'block';
+    document.getElementById('progress-select-card').style.display = 'block';
+    document.getElementById('teacher-homework-checker-card').style.display = 'block';
+  } else if(currentUser.role === 'student'){
+    document.getElementById('student-homework-submit-card').style.display = 'block';
+  }
+
+  initDashboard();
+  initGroupChat();
+  initMaterials();
+  initDoubtHistory();
+  initGoals();
+  initHomework();
+  initAttendance();
+  initPapers();
+  initLeaderboard();
+  initProgress();
+  initTeachersInfo();
+  initNotifications();
+  if(currentUser.role === 'parent') initParentDashboard();
+}
+
+/* ---------------- DASHBOARD ---------------- */
+async function initDashboard(){
+  if(currentUser.role === 'parent') return;
+
+  document.getElementById('dash-photo').src = currentUser.photo || '';
+  document.getElementById('dash-name').textContent = 'Hi, ' + currentUser.name + '!';
+  document.getElementById('dash-sub').textContent = currentUser.role === 'teacher' ? 'Teacher dashboard' : 'Here\'s where you stand today';
+
+  const statsEl = document.getElementById('dash-stats');
+
+  if(currentUser.role === 'student'){
+    const r = await computeProgress(currentUser.uid);
+    statsEl.innerHTML = `
+      <div class="stat-box"><span class="num">${r.avg}</span><span class="lbl">Avg Quiz Score</span></div>
+      <div class="stat-box"><span class="num">${r.attPct}</span><span class="lbl">Attendance</span></div>
+      <div class="stat-box"><span class="num">${r.goalsDone}</span><span class="lbl">Goals Done</span></div>
+      <div class="stat-box"><span class="num">${r.points}</span><span class="lbl">Points &amp; Streak 🔥</span></div>`;
+
+    db.ref('doubts/' + currentUser.uid).limitToLast(3).on('value', snap=>{
+      const data = snap.val();
+      const el = document.getElementById('dash-doubts');
+      if(!data){ el.innerHTML = '<p class="empty-hint">No doubts asked yet.</p>'; return; }
+      el.innerHTML = '';
+      Object.values(data).reverse().forEach(d=>{
+        const row = document.createElement('div');
+        row.className = 'list-item';
+        row.innerHTML = `<span>${escapeHtml(d.question)}</span>`;
+        el.appendChild(row);
+      });
+    });
+  }
+
+  if(currentUser.role === 'teacher'){
+    const usersSnap = await db.ref('users').get();
+    let studentCount = 0;
+    usersSnap.forEach(c=>{ if(c.val().role==='student') studentCount++; });
+    const hwSnap = await db.ref('homework').get();
+    const hwCount = hwSnap.exists() ? Object.keys(hwSnap.val()).length : 0;
+    statsEl.innerHTML = `
+      <div class="stat-box"><span class="num">${studentCount}</span><span class="lbl">Students</span></div>
+      <div class="stat-box"><span class="num">${hwCount}</span><span class="lbl">Homework Posted</span></div>`;
+    document.getElementById('dash-doubts').closest('.card').style.display = 'none';
+  }
+
+  db.ref('homework').limitToLast(5).on('value', snap=>{
+    const data = snap.val();
+    const el = document.getElementById('dash-homework');
+    if(!data){ el.innerHTML = '<p class="empty-hint">No homework posted yet.</p>'; return; }
+    el.innerHTML = '';
+    Object.values(data).reverse().slice(0,5).forEach(hw=>{
+      const row = document.createElement('div');
+      row.className = 'list-item';
+      row.innerHTML = `<span>${escapeHtml(hw.title)}</span><span class="badge red">Due ${escapeHtml(hw.dueDate||'—')}</span>`;
+      el.appendChild(row);
+    });
+  });
+}
+
+/* ---------------- NAV & SIDEBAR ---------------- */
+const TAB_DEFS = {
+  student: [
+    ['dashboard','🏠 Dashboard'], ['ai','🤖 Ask AI'], ['doubts','📖 Doubts'], ['goals','🎯 Goals'], ['quiz','📝 Quiz'],
+    ['homework','📌 Homework'], ['attendance','🗓️ Attendance'], ['progress','📊 Progress'],
+    ['teachers','👩‍🏫 Know Your Teachers'], ['leaderboard','🏆 Leaderboard'], ['group','👥 Group Study'], ['video','🎥 Live Class']
+  ],
+  teacher: [
+    ['dashboard','🏠 Dashboard'], ['group','👥 Group Study'], ['video','🎥 Live Class'], ['homework','📌 Homework'],
+    ['attendance','🗓️ Attendance'], ['papers','🧾 Question Papers'], ['progress','📊 Progress'],
+    ['leaderboard','🏆 Leaderboard'], ['teacher','📚 Teacher Corner']
+  ],
+  parent: [
+    ['parent','👨‍👩‍👧 Dashboard'], ['homework','📌 Homework']
+  ]
+};
+
+function switchTab(id) {
+  document.querySelectorAll('#tabs button, .sidebar-item').forEach(b => {
+    if(b.dataset.tab === id) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+  document.querySelectorAll('main section').forEach(s => s.classList.remove('active'));
+  const targetSection = document.getElementById('tab-' + id);
+  if(targetSection) targetSection.classList.add('active');
+  closeSidebar();
+}
+
+function buildNav(){
+  const tabs = TAB_DEFS[currentUser.role] || TAB_DEFS.student;
+  const nav = document.getElementById('tabs');
+  const sidebarNav = document.getElementById('sidebar-nav');
+  
+  nav.innerHTML = '';
+  sidebarNav.innerHTML = '';
+
+  tabs.forEach(([id, label], i)=>{
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.dataset.tab = id;
+    if(i===0) btn.classList.add('active');
+    btn.onclick = () => switchTab(id);
+    nav.appendChild(btn);
+
+    const sideBtn = document.createElement('button');
+    sideBtn.className = 'sidebar-item';
+    sideBtn.textContent = label;
+    sideBtn.dataset.tab = id;
+    if(i===0) sideBtn.classList.add('active');
+    sideBtn.onclick = () => switchTab(id);
+    sidebarNav.appendChild(sideBtn);
+  });
+
+  switchTab(tabs[0][0]);
+}
+
+/* ---------------- SESSION TIMER (1 hour) ---------------- */
+let sessionSeconds = 60*60;
+let sessionInterval;
+function startSession(){
+  clearInterval(sessionInterval);
+  sessionSeconds = 60*60;
+  sessionInterval = setInterval(()=>{
+    sessionSeconds--;
+    const m = String(Math.floor(sessionSeconds/60)).padStart(2,'0');
+    const s = String(sessionSeconds%60).padStart(2,'0');
+    document.getElementById('session-timer').textContent = `⏱ Session active: ${m}:${s} remaining`;
+    if(sessionSeconds<=0){
+      clearInterval(sessionInterval);
+      addMsg('bot', '• Your 1-hour study session has ended.\n• Refresh anytime to keep learning! 👋');
+      document.getElementById('chat-input').disabled = true;
+      document.getElementById('send-btn').disabled = true;
+    }
+  },1000);
+}
+
+/* ---------------- CHAT (AI doubt-solving via Groq) ---------------- */
+const chatWindow = document.getElementById('chat-window');
+function addMsg(kind, text){
+  const div = document.createElement('div');
+  div.className = 'msg ' + kind;
+  div.textContent = text;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function greetUser(name){
+  addMsg('bot', `• Hi ${name}! 👋 I'm your upgraded AI Study Assistant powered by Groq.\n• Ask me anything from your syllabus — type, speak, or upload image-questions.\n• All explanations and AI Notes are organized clearly in bullet points with multi-language support (English, Hindi, Marathi).\n• Your active session stays open for 1 hour.`);
+}
+
+document.getElementById('img-btn').onclick = () => document.getElementById('img-input').click();
+document.getElementById('img-input').onchange = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const preview = document.getElementById('img-preview');
+    preview.src = evt.target.result;
+    preview.style.display = 'block';
+    addMsg('system', '• Image attached successfully! Type your question about this image and click send.');
+  };
+  reader.readAsDataURL(file);
+};
+
+document.getElementById('send-btn').onclick = sendMessage;
+document.getElementById('chat-input').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+});
+document.querySelectorAll('.prompt-chip').forEach(chip=>{
+  chip.onclick = () => {
+    document.getElementById('chat-input').value = chip.textContent;
+    sendMessage();
+  };
+});
+
+async function sendMessage(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+
+  addMsg('user', text);
+  input.value = '';
+  document.getElementById('img-preview').style.display = 'none';
+
+  addMsg('system', 'AI thinking...');
+  const thinkingNode = chatWindow.lastChild;
+
+  try{
+    const reply = await callGroqAI(text);
+    thinkingNode.remove();
+    addMsg('bot', reply);
+    saveDoubt(text, reply);
+  }catch(err){
+    thinkingNode.remove();
+    console.error(err);
+    addMsg('bot', '• Hmm, I had trouble answering that.\n• ' + (err?.message || err));
+  }
+}
+
+/* ---------------- VOICE INPUT ---------------- */
+let recognizing = false;
+let recognition;
+const micBtn = document.getElementById('mic-btn');
+if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-IN';
+  recognition.onresult = (e) => { document.getElementById('chat-input').value = e.results[0][0].transcript; };
+  recognition.onend = () => { recognizing = false; micBtn.classList.remove('recording'); };
+  micBtn.onclick = () => {
+    if(recognizing){ recognition.stop(); return; }
+    recognizing = true;
+    micBtn.classList.add('recording');
+    recognition.start();
+  };
+} else {
+  micBtn.onclick = () => alert('Voice input is not supported in this browser.');
+}
+
+/* ---------------- DOUBT HISTORY ---------------- */
+function saveDoubt(question, answer){
+  if(!currentUser) return;
+  db.ref('doubts/' + currentUser.uid).push({ question, answer, time: Date.now() });
+}
+function initDoubtHistory(){
+  if(currentUser.role !== 'student') return;
+  const list = document.getElementById('doubts-list');
+  db.ref('doubts/' + currentUser.uid).limitToLast(50).on('value', snap=>{
+    const data = snap.val();
+    if(!data){ list.innerHTML = '<p class="empty-hint">No doubts asked yet — go ask something!</p>'; return; }
+    list.innerHTML = '';
+    Object.values(data).reverse().forEach(d=>{
+      const row = document.createElement('div');
+      row.className = 'list-item';
+      row.style.flexDirection = 'column';
+      row.style.alignItems = 'flex-start';
+      row.innerHTML = `<div style="font-weight:700;">${escapeHtml(d.question)}</div>
+        <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px; white-space:pre-wrap;">${escapeHtml((d.answer||'').slice(0,220))}${(d.answer||'').length>220?'…':''}</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">${new Date(d.time).toLocaleString()}</div>`;
+      list.appendChild(row);
+    });
+  });
+}
+
+/* ---------------- STUDY GOALS ---------------- */
+function initGoals(){
+  if(currentUser.role !== 'student') return;
+  const list = document.getElementById('goals-list');
+  db.ref('goals/' + currentUser.uid).on('value', snap=>{
+    const data = snap.val();
+    if(!data){ list.innerHTML = '<p class="empty-hint">No goals yet — add one above.</p>'; return; }
+    list.innerHTML = '';
+    Object.entries(data).reverse().forEach(([id,g])=>{
+      const row = document.createElement('div');
+      row.className = 'goal-item' + (g.done ? ' done' : '');
+      row.innerHTML = `<input type="checkbox" ${g.done?'checked':''}> <span>${escapeHtml(g.text)}</span>`;
+      row.querySelector('input').onchange = (e)=>{
+        db.ref(`goals/${currentUser.uid}/${id}/done`).set(e.target.checked);
+        if(e.target.checked){
+          triggerCelebrationBanner('🎉 Fantastic Job! Goal completed & points credited! Keep it up 🔥');
+        }
+      };
+      list.appendChild(row);
+    });
+  });
+}
+document.getElementById('goal-add-btn').onclick = () => {
+  const input = document.getElementById('goal-input');
+  const text = input.value.trim();
+  if(!text) return;
+  db.ref('goals/' + currentUser.uid).push({ text, done:false, time: Date.now() });
+  input.value = '';
+};
+
+function triggerCelebrationBanner(msg){
+  const activeSec = document.querySelector('section.active');
+  if(!activeSec) return;
+  const banner = document.createElement('div');
+  banner.className = 'celebration-banner';
+  banner.textContent = msg;
+  activeSec.prepend(banner);
+  setTimeout(()=>banner.remove(), 4000);
+}
+
+/* ---------------- QUIZZES ---------------- */
+document.getElementById('quiz-generate-btn').onclick = async () => {
+  const topic = document.getElementById('quiz-topic-input').value.trim();
+  const lang = document.getElementById('quiz-lang-select').value;
+  const area = document.getElementById('quiz-area');
+  if(!topic){ alert('Enter a topic first'); return; }
+  area.innerHTML = '<p class="empty-hint">Generating AI Exam / Flashcards in ' + lang + ' via Groq...</p>';
+  const prompt = `Create a 5-question multiple choice quiz with AI flashcards on the topic "${topic}" with explanations supported in ${lang}. Reply with ONLY valid JSON, no markdown fences, no extra text, matching this exact shape:
+{"questions":[{"q":"question text","options":["a","b","c","d"],"answer":0}]}
+"answer" is the index (0-3) of the correct option.`;
+  try{
+    const rawResp = await callGroqAI(prompt);
+    let raw = rawResp.replace(/```json|```/g,'').trim();
+    const firstBrace = raw.indexOf('{');
+    const lastBrace = raw.lastIndexOf('}');
+    if(firstBrace !== -1 && lastBrace !== -1) {
+      raw = raw.substring(firstBrace, lastBrace + 1);
+    }
+    const quiz = JSON.parse(raw);
+    renderQuiz(quiz.questions, topic);
+  }catch(err){
+    console.error(err);
+    area.innerHTML = '<p class="empty-hint">Could not generate quiz right now. Try again in a moment.</p>';
+  }
+};
+
+function renderQuiz(questions, topic){
+  const area = document.getElementById('quiz-area');
+  area.innerHTML = '';
+  const answers = new Array(questions.length).fill(null);
+  questions.forEach((q, qi)=>{
+    const block = document.createElement('div');
+    block.className = 'quiz-q';
+    block.innerHTML = `<p>${qi+1}. ${escapeHtml(q.q)}</p>`;
+    q.options.forEach((opt, oi)=>{
+      const optEl = document.createElement('div');
+      optEl.className = 'quiz-opt';
+      optEl.textContent = opt;
+      optEl.onclick = () => {
+        block.querySelectorAll('.quiz-opt').forEach(o=>o.classList.remove('selected'));
+        optEl.classList.add('selected');
+        answers[qi] = oi;
+      };
+      block.appendChild(optEl);
+    });
+    area.appendChild(block);
+  });
+  const submitBtn = document.createElement('button');
+  submitBtn.className = 'btn';
+  submitBtn.style.marginTop = '10px';
+  submitBtn.textContent = 'Submit Mock Test';
+  submitBtn.onclick = () => {
+    let score = 0;
+    area.querySelectorAll('.quiz-q').forEach((block, qi)=>{
+      const opts = block.querySelectorAll('.quiz-opt');
+      opts[questions[qi].answer].classList.add('correct');
+      if(answers[qi] === questions[qi].answer) score++;
+      else if(answers[qi] !== null) opts[answers[qi]].classList.add('wrong');
+    });
+    submitBtn.disabled = true;
+    const resultEl = document.createElement('p');
+    resultEl.style.fontWeight = '700';
+    resultEl.style.marginTop = '10px';
+    resultEl.textContent = `You scored ${score}/${questions.length}! Achievement unlocked 🏆`;
+    area.appendChild(resultEl);
+    triggerCelebrationBanner('🏆 Achievement Unlocked: Test completed successfully with stellar performance!');
+    if(currentUser.role === 'student'){
+      db.ref('quizResults/' + currentUser.uid).push({ topic, score, total: questions.length, time: Date.now() });
+      db.ref('users/' + currentUser.uid + '/points').transaction(p => (p||0) + score*10);
+    }
+  };
+  area.appendChild(submitBtn);
+}
+
+/* ---------------- HOMEWORK ---------------- */
+const studentHwFileInput = document.getElementById('student-hw-file');
+if(studentHwFileInput){
+  studentHwFileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    document.getElementById('student-hw-file-name').textContent = file ? file.name : 'No file selected';
+  };
+}
+
+function initHomework(){
+  const targets = ['homework-list'];
+  if(currentUser.role === 'parent') targets.push('pd-homework-list');
+  
+  db.ref('homework').limitToLast(50).on('value', snap=>{
+    const data = snap.val();
+    targets.forEach(targetId=>{
+      const list = document.getElementById(targetId);
+      if(!list) return;
+      if(!data){ list.innerHTML = '<p class="empty-hint">No homework posted yet.</p>'; return; }
+      list.innerHTML = '';
+      Object.entries(data).reverse().forEach(([hwId, hw])=>{
+        const row = document.createElement('div');
+        row.className = 'list-item';
+        row.innerHTML = `<div>
+            <div style="font-weight:700;">${escapeHtml(hw.title)}</div>
+            <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(hw.details||'')}</div>
+          </div>
+          <span class="badge red">Due ${escapeHtml(hw.dueDate||'—')}</span>`;
+        list.appendChild(row);
+      });
+    });
+
+    const studentHwSelect = document.getElementById('student-hw-select');
+    if(studentHwSelect && data){
+      studentHwSelect.innerHTML = '<option value="">Select assigned homework</option>';
+      Object.entries(data).reverse().forEach(([hwId, hw])=>{
+        const opt = document.createElement('option');
+        opt.value = hwId;
+        opt.textContent = hw.title + (hw.dueDate ? ` (Due: ${hw.dueDate})` : '');
+        studentHwSelect.appendChild(opt);
+      });
+    }
+  });
+
+  if(currentUser.role === 'teacher'){
+    initTeacherSubmissions();
+  }
+}
+
+const hwPostBtn = document.getElementById('hw-post-btn');
+if(hwPostBtn) hwPostBtn.onclick = () => {
+  const title = document.getElementById('hw-title-input').value.trim();
+  const dueDate = document.getElementById('hw-date-input').value;
+  const details = document.getElementById('hw-details-input').value.trim();
+  if(!title){ alert('Add a title'); return; }
+  db.ref('homework').push({ title, dueDate, details, postedBy: currentUser.name, time: Date.now() });
+  document.getElementById('hw-title-input').value = '';
+  document.getElementById('hw-details-input').value = '';
+  triggerCelebrationBanner('📌 Homework successfully broadcasted to the class!');
+  addNotification('New homework posted: ' + title);
+};
+
+const studentHwSubmitBtn = document.getElementById('student-hw-submit-btn');
+if(studentHwSubmitBtn){
+  studentHwSubmitBtn.onclick = async () => {
+    const hwId = document.getElementById('student-hw-select').value;
+    if(!hwId){ alert('Please select a homework assignment'); return; }
+    const statusEl = document.getElementById('student-hw-submit-status');
+    statusEl.textContent = 'Submitting homework...';
+    
+    const hwSnap = await db.ref('homework/' + hwId).get();
+    const hwTitle = hwSnap.exists() ? hwSnap.val().title : 'Assignment';
+
+    await db.ref('homeworkSubmissions').push({
+      hwId,
+      hwTitle,
+      studentUid: currentUser.uid,
+      studentName: currentUser.name,
+      fileName: document.getElementById('student-hw-file').files[0]?.name || 'Submitted Document',
+      status: 'submitted',
+      time: Date.now()
+    });
+
+    statusEl.textContent = 'Homework submitted successfully!';
+    triggerCelebrationBanner('🎉 Assignment successfully turned in! Great job completing your homework!');
+    setTimeout(()=> statusEl.textContent = '', 4000);
+  };
+}
+
+function initTeacherSubmissions(){
+  const list = document.getElementById('teacher-submissions-list');
+  db.ref('homeworkSubmissions').on('value', snap => {
+    const data = snap.val();
+    if(!data){ list.innerHTML = '<p class="empty-hint">No student submissions yet.</p>'; return; }
+    list.innerHTML = '';
+    Object.entries(data).reverse().forEach(([subId, sub]) => {
+      const row = document.createElement('div');
+      row.className = 'list-item';
+      row.style.flexDirection = 'column';
+      row.style.alignItems = 'flex-start';
+      row.innerHTML = `
+        <div style="display:flex; justify-content:space-between; width:100%;">
+          <strong>${escapeHtml(sub.studentName)} — ${escapeHtml(sub.hwTitle)}</strong>
+          <span class="status-pill ${sub.status==='checked'?'status-checked':'status-submitted'}">${sub.status}</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">File: ${escapeHtml(sub.fileName)}</div>
+        ${sub.aiRemarks ? `<div class="remark-box"><strong>AI Remarks & Suggestions:</strong><br>${escapeHtml(sub.aiRemarks)}</div>` : ''}
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn small" onclick="runAiChecker('${subId}')">🤖 Run AI Checker</button>
+          ${sub.status !== 'checked' ? `<button class="btn small secondary" onclick="approveAiSubmission('${subId}')">✅ Approve Feedback</button>` : ''}
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  });
+}
+
+async function runAiChecker(subId){
+  const subSnap = await db.ref('homeworkSubmissions/' + subId).get();
+  if(!subSnap.exists()) return;
+  const sub = subSnap.val();
+  
+  const prompt = `Analyze this student homework submission titled "${sub.hwTitle}" by student "${sub.studentName}". Provide correct answers, incorrect answers, estimated score out of 10, personalized remarks, and topics the student needs to improve in bullet points.`;
+  try{
+    const aiRemarks = await callGroqAI(prompt);
+    await db.ref('homeworkSubmissions/' + subId).update({ aiRemarks, status: 'checked' });
+    triggerCelebrationBanner('🤖 AI generated remarks successfully!');
+    addNotification('AI generated feedback for your homework: ' + sub.hwTitle);
+  }catch(err){
+    alert('Failed to run AI checker.');
+  }
+}
+
+async function approveAiSubmission(subId){
+  await db.ref('homeworkSubmissions/' + subId).update({ status: 'checked' });
+  triggerCelebrationBanner('✅ Homework feedback approved and sent to student!');
+  addNotification('Your teacher reviewed and approved your homework submission!');
+}
+
+function addNotification(text){
+  db.ref('notifications/' + (currentUser ? currentUser.uid : 'global')).push({ text, time: Date.now() });
+}
+
+/* ---------------- ATTENDANCE ---------------- */
+function initAttendance(){
+  const dateInput = document.getElementById('att-date-input');
+  dateInput.value = new Date().toISOString().split('T')[0];
+  if(currentUser.role === 'teacher'){
+    dateInput.onchange = loadAttendanceMarkList;
+    loadAttendanceMarkList();
+    document.getElementById('att-save-btn').onclick = saveAttendance;
+  }
+  loadMyAttendance();
+}
+
+async function loadAttendanceMarkList(){
+  const dateStr = document.getElementById('att-date-input').value;
+  const container = document.getElementById('att-mark-list');
+  container.innerHTML = '<p class="empty-hint">Loading students...</p>';
+  const usersSnap = await db.ref('users').get();
+  const existingSnap = await db.ref('attendanceRecords/' + dateStr).get();
+  const existing = existingSnap.exists() ? existingSnap.val() : {};
+
+  container.innerHTML = '';
+  usersSnap.forEach(child=>{
+    const u = child.val();
+    if(u.role !== 'student') return;
+    const uid = child.key;
+    const status = existing[uid] || 'present';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--border-color);font-size:13.5px;';
+    row.innerHTML = `<span>${escapeHtml(u.name)} (${escapeHtml(u.grade || 'N/A')})</span>
+      <select class="field" style="width:130px;margin-bottom:0;" data-uid="${uid}">
+        <option value="present" ${status==='present'?'selected':''}>Present</option>
+        <option value="absent" ${status==='absent'?'selected':''}>Absent</option>
+      </select>`;
+    container.appendChild(row);
+  });
+}
+
+function saveAttendance(){
+  const dateStr = document.getElementById('att-date-input').value;
+  const selects = document.querySelectorAll('#att-mark-list select');
+  const record = {};
+  selects.forEach(s => { record[s.dataset.uid] = s.value; });
+  db.ref('attendanceRecords/' + dateStr).set(record);
+  document.getElementById('att-status').textContent = 'Attendance saved successfully!';
+  addNotification('Attendance marked for ' + dateStr);
+  setTimeout(() => { document.getElementById('att-status').textContent = ''; }, 3000);
+}
+
+async function loadMyAttendance(){
+  const targetUid = currentUser.role === 'parent' ? parentChildUid : currentUser.uid;
+  if(!targetUid) return;
+
+  const attSnap = await db.ref('attendanceRecords').get();
+  let total = 0, present = 0;
+  const historyEl = document.getElementById('att-history');
+  if(historyEl) historyEl.innerHTML = '';
+  if(attSnap.exists()){
+    attSnap.forEach(dateNode => {
+      const dateStr = dateNode.key;
+      const records = dateNode.val();
+      if(records && records[targetUid] !== undefined){
+        total++;
+        const status = records[targetUid];
+        if(status === 'present') present++;
+        if(historyEl){
+          const row = document.createElement('div');
+          row.className = 'list-item';
+          row.innerHTML = `<span>${dateStr}</span><span class="badge ${status==='present'?'green':'red'}">${status}</span>`;
+          historyEl.appendChild(row);
+        }
+      }
+    });
+  }
+  const daysEl = document.getElementById('att-days');
+  const pctEl = document.getElementById('att-percent');
+  if(daysEl) daysEl.textContent = total;
+  if(pctEl) pctEl.textContent = total > 0 ? Math.round((present/total)*100) + '%' : '–';
+}
+
+function initPapers(){
+  const genBtn = document.getElementById('paper-generate-btn');
+  if(genBtn){
+    genBtn.onclick = async () => {
+      const topic = document.getElementById('paper-topic-input').value.trim();
+      const marks = document.getElementById('paper-marks-input').value.trim();
+      if(!topic || !marks){ alert('Enter topic and total marks'); return; }
+      const prompt = `Create a professional printable examination question paper on "${topic}" for total marks "${marks}". Structure it with clear sections. Use clean markdown.`;
+      try{
+        const paperContent = await callGroqAI(prompt);
+        db.ref('papers').push({ topic, marks, content: paperContent, teacherName: currentUser.name, time: Date.now() });
+        document.getElementById('paper-topic-input').value = '';
+        document.getElementById('paper-marks-input').value = '';
+        triggerCelebrationBanner('🧾 Printable question paper generated successfully!');
+      }catch(err){
+        alert('Failed to generate paper.');
+      }
+    };
+  }
+  const list = document.getElementById('papers-list');
+  db.ref('papers').limitToLast(20).on('value', snap=>{
+    const data = snap.val();
+    if(!data){ list.innerHTML = '<p class="empty-hint">No question papers yet.</p>'; return; }
+    list.innerHTML = '';
+    Object.entries(data).reverse().forEach(([id, p])=>{
+      const row = document.createElement('div');
+      row.className = 'list-item';
+      row.style.flexDirection = 'column';
+      row.style.alignItems = 'flex-start';
+      row.innerHTML = `<div style="font-weight:700;display:flex;justify-content:space-width;width:100%;">${escapeHtml(p.topic)} (${escapeHtml(p.marks)} Marks) <button class="btn small secondary" onclick="window.print()">🖨️ Print / Download</button></div>
+        <div style="font-size:12px; color:var(--text-muted); margin:4px 0; white-space:pre-wrap;">${escapeHtml(p.content)}</div>`;
+      list.appendChild(row);
+    });
+  });
+}
+
+function initLeaderboard(){
+  const list = document.getElementById('leaderboard-list');
+  db.ref('users').orderByChild('points').on('value', snap=>{
+    const students = [];
+    snap.forEach(c => {
+      const u = c.val();
+      if(u.role === 'student') students.push(u);
+    });
+    students.sort((a,b) => (b.points||0) - (a.points||0));
+    if(students.length === 0){ list.innerHTML = '<p class="empty-hint">No scores yet.</p>'; return; }
+    list.innerHTML = '';
+    students.forEach((s, i)=>{
+      const row = document.createElement('div');
+      row.className = 'lb-row' + (i===0?' top1':'');
+      row.innerHTML = `<div class="lb-rank">${i+1}</div>
+        <div>${escapeHtml(s.name)} (${escapeHtml(s.grade||'N/A')}) 🏅</div>
+        <div class="lb-points">${s.points || 0} pts</div>`;
+      list.appendChild(row);
+    });
+  });
+}
+
+function initProgress(){
+  const targetUid = currentUser.role === 'parent' ? parentChildUid : currentUser.uid;
+  if(currentUser.role === 'student' || currentUser.role === 'parent'){
+    if(targetUid){
+      computeProgress(targetUid).then(r=>{
+        const avgEl = document.getElementById('pr-quiz-avg');
+        const attEl = document.getElementById('pr-attendance');
+        const goalsEl = document.getElementById('pr-goals');
+        const ptsEl = document.getElementById('pr-points');
+        if(avgEl) avgEl.textContent = r.avg;
+        if(attEl) attEl.textContent = r.attPct;
+        if(goalsEl) goalsEl.textContent = r.goalsDone;
+        if(ptsEl) ptsEl.textContent = r.points;
+      });
+    }
+  } else if(currentUser.role === 'teacher'){
+    const sel = document.getElementById('progress-student-select');
+    db.ref('users').get().then(snap => {
+      sel.innerHTML = '<option value="">Select student</option>';
+      snap.forEach(c => {
+        const u = c.val();
+        if(u.role === 'student'){
+          const opt = document.createElement('option');
+          opt.value = c.key;
+          opt.textContent = `${u.name} (${u.grade || 'N/A'})`;
+          sel.appendChild(opt);
+        }
+      });
+    });
+    sel.onchange = async (e) => {
+      const uid = e.target.value;
+      if(!uid) return;
+      const r = await computeProgress(uid);
+      document.getElementById('pr-quiz-avg').textContent = r.avg;
+      document.getElementById('pr-attendance').textContent = r.attPct;
+      document.getElementById('pr-goals').textContent = r.goalsDone;
+      document.getElementById('pr-points').textContent = r.points;
+    };
+  }
+}
+
+/* ---------------- KNOW YOUR TEACHERS ---------------- */
+function initTeachersInfo(){
+  const list = document.getElementById('teachers-info-list');
+  if(!list) return;
+  db.ref('users').on('value', snap => {
+    const data = snap.val();
+    if(!data){ list.innerHTML = '<p class="empty-hint">No teachers found.</p>'; return; }
+    list.innerHTML = '';
+    let found = false;
+    Object.values(data).forEach(u => {
+      if(u.role === 'teacher'){
+        found = true;
+        const row = document.createElement('div');
+        row.className = 'list-item';
+        row.style.flexDirection = 'column';
+        row.style.alignItems = 'flex-start';
+        row.innerHTML = `
+          <div style="font-weight:700; font-size:15px; color:var(--marigold);">${escapeHtml(u.name)}</div>
+          <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">Email: ${escapeHtml(u.email)}</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Role: Faculty / Instructor</div>
+        `;
+        list.appendChild(row);
+      }
+    });
+    if(!found){
+      list.innerHTML = '<p class="empty-hint">No teachers registered yet.</p>';
+    }
+  });
+}
+
+function initParentDashboard(){
+  if(!parentChildUid) return;
+  computeProgress(parentChildUid).then(r=>{
+    const qAvg = document.getElementById('pd-quiz-avg');
+    const att = document.getElementById('pd-attendance');
+    if(qAvg) qAvg.textContent = r.avg;
+    if(att) att.textContent = r.attPct;
+  });
+  loadMyAttendance();
+}
+
+function initNotifications(){
+  const btn = document.getElementById('bell-btn');
+  const panel = document.getElementById('notif-panel');
+  const overlay = document.getElementById('notif-overlay');
+  btn.onclick = () => {
+    panel.classList.add('open');
+    overlay.classList.add('open');
+    document.getElementById('bell-dot').style.display = 'none';
+  };
+  overlay.onclick = () => {
+    panel.classList.remove('open');
+    overlay.classList.remove('open');
+  };
+  
+  const list = document.getElementById('notif-list');
+  db.ref('notifications').limitToLast(20).on('value', snap => {
+    const data = snap.val();
+    if(!data){ list.innerHTML = '<p class="empty-hint">Nothing new right now.</p>'; return; }
+    list.innerHTML = '';
+    Object.values(data).reverse().forEach(n => {
+      const div = document.createElement('div');
+      div.className = 'notif-item';
+      div.innerHTML = `<div>🔔 ${escapeHtml(n.text)}</div><div class="t">${new Date(n.time).toLocaleTimeString()}</div>`;
+      list.appendChild(div);
+      document.getElementById('bell-dot').style.display = 'block';
+    });
+  });
+}
+
+document.getElementById('join-call-btn').onclick = () => {
+  const holder = document.getElementById('video-holder');
+  holder.innerHTML = `<iframe class="video-frame" src="https://meet.jit.si/StudixLiveClassroomRoom101" allow="camera; microphone; fullscreen; display-capture"></iframe>`;
+};
+
+/* ---------------- UTILS ---------------- */
+function escapeHtml(str){
+  if(!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+async function computeProgress(uid){
+  const quizSnap = await db.ref('quizResults/' + uid).get();
+  let quizCount = 0, quizSum = 0;
+  if(quizSnap.exists()){
+    quizSnap.forEach(q=>{
+      quizCount++;
+      const val = q.val();
+      quizSum += (val.score / val.total) * 100;
+    });
+  }
+  const avg = quizCount > 0 ? Math.round(quizSum / quizCount) + '%' : '—';
+
+  const attSnap = await db.ref('attendanceRecords').get();
+  let totalDays = 0, presentDays = 0;
+  if(attSnap.exists()){
+    attSnap.forEach(dateNode => {
+      const records = dateNode.val();
+      if(records && records[uid] !== undefined){
+        totalDays++;
+        if(records[uid] === 'present') presentDays++;
+      }
+    });
+  }
+  const attPct = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) + '%' : '—';
+
+  const goalsSnap = await db.ref('goals/' + uid).get();
+  let goalsDone = 0;
+  if(goalsSnap.exists()){
+    goalsSnap.forEach(g => { if(g.val().done) goalsDone++; });
+  }
+
+  const userSnap = await db.ref('users/' + uid).get();
+  const points = userSnap.exists() ? (userSnap.val().points || 0) : 0;
+
+  return { avg, attPct, goalsDone, points };
+}
+
+function initGroupChat(){
+  const win = document.getElementById('group-window');
+  db.ref('groupChat').limitToLast(50).on('value', snap=>{
+    const data = snap.val();
+    if(!data){ win.innerHTML = '<p class="empty-hint">No messages yet. Say hello to the class!</p>'; return; }
+    win.innerHTML = '';
+    Object.values(data).forEach(m=>{
+      const isMe = currentUser && m.uid === currentUser.uid;
+      const div = document.createElement('div');
+      div.className = 'gmsg ' + (isMe ? 'me' : 'other');
+      div.innerHTML = `<div class="who">${escapeHtml(m.name)}</div><div>${escapeHtml(m.text)}</div>`;
+      win.appendChild(div);
+    });
+    win.scrollTop = win.scrollHeight;
+  });
+  document.getElementById('group-send-btn').onclick = sendGroupMsg;
+  document.getElementById('group-input').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendGroupMsg(); }
+  });
+}
+function sendGroupMsg(){
+  const input = document.getElementById('group-input');
+  const text = input.value.trim();
+  if(!text) return;
+  db.ref('groupChat').push({ uid: currentUser.uid, name: currentUser.name, text, time: Date.now() });
+  input.value = '';
+}
+
+function initMaterials(){
+  const list = document.getElementById('materials-list');
+  db.ref('materials').limitToLast(30).on('value', snap=>{
+    const data = snap.val();
+    if(!data){ list.innerHTML = '<p class="empty-hint">No materials yet.</p>'; return; }
+    list.innerHTML = '';
+    Object.values(data).reverse().forEach(m=>{
+      const row = document.createElement('div');
+      row.className = 'list-item';
+      row.innerHTML = `<div>
+          <div style="font-weight:700;">${escapeHtml(m.title)}</div>
+          <div style="font-size:11px; color:var(--text-muted);">Shared by ${escapeHtml(m.teacherName)}</div>
+        </div>
+        <a href="${escapeHtml(m.link)}" target="_blank" class="btn small">Open AI Notes / Link</a>`;
+      list.appendChild(row);
+    });
+  });
+  const uploadBtn = document.getElementById('material-upload-btn');
+  if(uploadBtn){
+    uploadBtn.onclick = () => {
+      const title = document.getElementById('material-name-input').value.trim();
+      const link = document.getElementById('material-link-input').value.trim();
+      if(!title || !link){ alert('Provide a title and link'); return; }
+      db.ref('materials').push({ title, link, teacherName: currentUser.name, time: Date.now() });
+      document.getElementById('material-name-input').value = '';
+      document.getElementById('material-link-input').value = '';
+      triggerCelebrationBanner('📚 AI Notes & study material shared with class!');
+      addNotification('New study material shared: ' + title);
+    };
+  }
+}
+</script>
+</body>
+</html>
